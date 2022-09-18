@@ -2,8 +2,9 @@ import * as Dialog from "@radix-ui/react-dialog"
 import { Check, GameController } from "phosphor-react"
 import LabelInput from "../../components/labelInput"
 import * as Checkbox from "@radix-ui/react-checkbox"
-import { useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
+import axios from "axios";
 
 interface Game {
     id: string;
@@ -13,20 +14,43 @@ interface Game {
 export default function Forms() {
     const [games, setGames] = useState<Game[]>([])
     const [weekDays, setWeekDays] = useState<string[]>([])
+    const [useVoiceChannel, setUseVoiceChannel] = useState(false)
 
     useEffect(() => {
-        fetch('http://localhost:3333/games')
-            .then(response => response.json())
-            .then(data => {
-                setGames(data)
-            })
+        axios('http://localhost:3333/games').then(response => {
+            setGames(response.data)
+        })
     }, [])
 
+    async function handleCreateAd(event: FormEvent) {
+        event.preventDefault();
+
+        const formData = new FormData(event.target as HTMLFormElement)
+        const data = Object.fromEntries(formData)
+
+        try {
+            await axios.post(`http://localhost:3333/games/${data.game}/ads`, {
+                "name": data.name,
+                "yearsPlaying": Number(data.yearsPlaying),
+                "discord": data.discord,
+                "weekDays": weekDays.map(Number),
+                "hourStart": data.hourStart,
+                "hourEnd": data.hourEnd,
+                "useVoiceChannel": useVoiceChannel
+            })
+            alert('Anúncio criado com sucesso!')
+        } catch (err) {
+            console.log(err)
+            alert('Erro ao criar o anúncio!')
+        }
+    }
+
     return (
-        <form className="mt-8">
+        <form onSubmit={handleCreateAd} className="mt-8">
             <select
                 defaultValue=""
                 id='game'
+                name="game"
                 className="bg-zinc-900 py-3 px-4 rounded text-sm placeholder:text-zinc-500 "
             >
                 <option disabled value='' >Selecione o game que deseja jogar</option>
@@ -129,12 +153,14 @@ export default function Forms() {
                             className="bg-zinc-900 py-3 px-4 rounded text-sm placeholder:text-zinc-500"
                             type="time"
                             id="hourStart"
+                            name="hourStart"
                             placeholder='De'
                         />
                         <input
                             className="bg-zinc-900 py-3 px-4 rounded text-sm placeholder:text-zinc-500"
                             type="time"
                             id='hourEnd'
+                            name="hourEnd"
                             placeholder='Até'
                         />
                     </div>
@@ -144,7 +170,13 @@ export default function Forms() {
 
             <label className="mt-4 flex iten gap-2 text-sm ">
 
-                <Checkbox.Root className="w-6 h-6 p-1 rounded bg-zinc-900">
+                <Checkbox.Root
+                    checked={useVoiceChannel}
+                    onCheckedChange={(checked) => {
+                        checked ? setUseVoiceChannel(true) :
+                            setUseVoiceChannel(false)
+                    }}
+                    className="w-6 h-6 p-1 rounded bg-zinc-900">
                     <Checkbox.Indicator>
                         <Check className="w-4 h-4 text-emerald-400" />
                     </Checkbox.Indicator>
